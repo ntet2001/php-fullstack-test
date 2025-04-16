@@ -1,10 +1,15 @@
+//import { Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import './App.css'
+import Home from './pages/Brand/Home'
 
 function App() {
 
   return (
     <>
-      <p className='text-3xl font-bold underline'>php fullstack test</p>
+    <Routes>
+      <Route index element={<Home/>} />
+    </Routes>
     </>
   )
 }
