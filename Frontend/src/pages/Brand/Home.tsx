@@ -1,8 +1,92 @@
 //import React from "react";
+import { useEffect, useState } from "react";
 import Breadcrumb from "../../components/Breadcrumbs/Breadcrumb";
 import { Link } from "react-router-dom";
+import { IBrandInfo } from "../../types/IBrandInfo";
+import axios from "axios";
+import { MdUpdate } from "react-icons/md";
 
 const Home = () => {
+
+  const [brandInfo, setBrandInfo] = useState<IBrandInfo[] | null>(null);
+  const [filter, setFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [brandId, setBrandId] = useState(0);
+
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/brands/');
+        if (response && response.data.success === false) {
+          throw new Error(`Failed to fetch Brand: ${response.data.success}`);
+        }
+        console.log(response.data);
+        const data = await response.data.data;
+        console.log(data);
+        setBrandInfo(data);
+      } catch (error: any) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBrands();
+  }, []);
+
+  const handleDelete = async (brand_id: number) => {
+    
+    const confirm = window.confirm(
+      'Are you shure you want to delete this brand?',
+    );
+    if (!confirm) return;
+
+    try {
+
+        const response = await fetch(`http://127.0.0.1:8000/api/brands/${brand_id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+        });
+      
+     
+      console.log(response);
+
+      if (!response!.ok) {
+        const errorData = await response!.json();
+        const errorMessage =
+          errorData.message || `Error deleting brand: ${response!.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const updatedBrand =
+        brandInfo?.filter((brand) => brand.brand_id !== brand_id) || [];
+      setBrandInfo(updatedBrand);
+    } catch (error: any) {
+      console.error('Error deleting Brand:', error);
+      setError(error.message);
+    }
+  };
+
+  const filteredBrand = brandInfo?.filter(
+    (brand) =>
+      brand.brand_name.toLowerCase().includes(filter.toLowerCase()) ||
+      brand.brand_image.toLowerCase().includes(filter.toLowerCase()) ||
+      brand.rating ||
+      brand.country.toLowerCase().includes(filter.toLowerCase()) 
+  );
+
+  const indexOfLastBrand = currentPage * itemsPerPage;
+  const indexOfFirstBrand = indexOfLastBrand - itemsPerPage;
+  const currentBrands = filteredBrand?.slice(indexOfFirstBrand, indexOfLastBrand);
+
+  const totalPages = Math.ceil((currentBrands?.length || 0) / itemsPerPage);
+
+
   return (
     <>
       <Breadcrumb pageName="Home" backLink="/" />
@@ -36,72 +120,75 @@ const Home = () => {
                 <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
                   Brand rating
                 </th>
+                <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
+                  Country
+                </th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody>
-              {/* {currentGenericsProcess &&
-                currentGenericsProcess.map((genericProcessInfo) => (
-                  <tr key={genericProcessInfo.idProcessusGenerique}>
+              {currentBrands &&
+                currentBrands.map((brandInfo) => (
+                  <tr key={brandInfo.brand_id}>
                     <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
                       <div className="flex items-center gap-4">
                         <div>
                           <h5 className="font-medium text-black dark:text-white">
-                            {genericProcessInfo.nomProcessusGenerique}
+                            {brandInfo.brand_id}
                           </h5>
                         </div>
                       </div>
                     </td>
-                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                      <p
-                        className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium ${
-                          genericProcessInfo.statutProcessusGenerique ===
-                          "ACTIVATED"
-                            ? "bg-success text-success"
-                            : genericProcessInfo.statutProcessusGenerique ===
-                              "DEACTIVATED"
-                            ? "bg-danger text-danger"
-                            : "bg-warning text-warning"
-                        }`}
-                      >
-                        {genericProcessInfo.statutProcessusGenerique}
-                      </p>
+
+                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <h5 className="font-medium text-black dark:text-white">
+                            {brandInfo.brand_name}
+                          </h5>
+                        </div>
+                      </div>
                     </td>
+
+                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <h5 className="font-medium text-black dark:text-white">
+                            <img src={brandInfo.brand_image} alt="image"/>
+                          </h5>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <h5 className="font-medium text-black dark:text-white">
+                            {brandInfo.rating}
+                          </h5>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <h5 className="font-medium text-black dark:text-white">
+                            {brandInfo.country}
+                          </h5>
+                        </div>
+                      </div>
+                    </td>
+                    
                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                       <div className="flex items-center space-x-3.5">
                         <button
-                          className="hover:text-primary"
+                          className="text-white"
                           onClick={() => {
-                            handleShowgenericProcessDetails(
-                              genericProcessInfo.idProcessusGenerique
-                            );
-                          }}
-                        >
-                          <svg
-                            className="fill-current"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 18 18"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M8.99981 14.8219C3.43106 14.8219 0.674805 9.50624 0.562305 9.28124C0.47793 9.11249 0.47793 8.88749 0.562305 8.71874C0.674805 8.49374 3.43106 3.20624 8.99981 3.20624C14.5686 3.20624 17.3248 8.49374 17.4373 8.71874C17.5217 8.88749 17.5217 9.11249 17.4373 9.28124C17.3248 9.50624 14.5686 14.8219 8.99981 14.8219ZM1.85605 8.99999C2.4748 10.0406 4.89356 13.5562 8.99981 13.5562C13.1061 13.5562 15.5248 10.0406 16.1436 8.99999C15.5248 7.95936 13.1061 4.44374 8.99981 4.44374C4.89356 4.44374 2.4748 7.95936 1.85605 8.99999Z"
-                              fill=""
-                            />
-                            <path
-                              d="M9 11.3906C7.67812 11.3906 6.60938 10.3219 6.60938 9C6.60938 7.67813 7.67812 6.60938 9 6.60938C10.3219 6.60938 11.3906 7.67813 11.3906 9C11.3906 10.3219 10.3219 11.3906 9 11.3906ZM9 7.875C8.38125 7.875 7.875 8.38125 7.875 9C7.875 9.61875 8.38125 10.125 9 10.125C9.61875 10.125 10.125 9.61875 10.125 9C10.125 8.38125 9.61875 7.875 9 7.875Z"
-                              fill=""
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          className="hover:text-primary"
-                          onClick={() => {
-                            onDeleteClick(
-                              genericProcessInfo.idProcessusGenerique
+                            handleDelete(
+                              brandInfo.brand_id
                             );
                           }}
                         >
@@ -134,36 +221,27 @@ const Home = () => {
 
                         <button className="hover:text-primary">
                           <Link
-                            className="hover:text-primary"
-                            to={`/generic-process/update/${genericProcessInfo.idProcessusGenerique}`}
+                            className="text-white"
+                            to={`/brand/update/${brandInfo.brand_id}`}
                           >
                             <MdUpdate />
-                          </Link>
-                        </button>
-
-                        <button className="hover:text-primary">
-                          <Link
-                            className="hover:text-primary"
-                            to={`/generic-process/update/elementaries-process/${genericProcessInfo.idProcessusGenerique}`}
-                          >
-                            <SlOptionsVertical />
                           </Link>
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))} */}
+                ))}
             </tbody>
           </table>
         </div>
         {/* Pagination controls */}
         <div className="flex justify-between mt-4 mb-4">
-          {/* <button
+          <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
             className="inline-flex items-center justify-center rounded-md bg-primary py-2 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-2 xl:px-4"
           >
-            Précédent
+            Previous
           </button>
           <span className="text-primary font-medium">
             Page {currentPage} of {totalPages}
@@ -175,8 +253,8 @@ const Home = () => {
             disabled={currentPage === totalPages}
             className="inline-flex items-center justify-center rounded-md bg-primary py-2 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-2 xl:px-4"
           >
-            Suivant
-          </button> */}
+            Next
+          </button>
         </div>
       </div>
     </>
